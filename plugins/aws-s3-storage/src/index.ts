@@ -190,40 +190,35 @@ export default class S3Database implements IPluginStorage<S3Config> {
   }
 
   private async _getData(): Promise<LocalStorage> {
-    if (!this._localData) {
-      this._localData = await new Promise((resolve, reject): void => {
-        const { bucket, keyPrefix } = this.config;
-        this.logger.debug({ keyPrefix, bucket }, 's3: [_getData] bucket: @{bucket} prefix: @{keyPrefix}');
-        this.logger.trace('s3: [_getData] get database object');
-        this.s3.getObject(
-          {
-            Bucket: bucket,
-            Key: `${keyPrefix}verdaccio-s3-db.json`,
-          },
-          (err, response) => {
-            if (err) {
-              const s3Err: VerdaccioError = convertS3Error(err);
-              this.logger.error({ err: s3Err.message }, 's3: [_getData] err: @{err}');
-              if (is404Error(s3Err)) {
-                this.logger.error('s3: [_getData] err 404 create new database');
-                resolve({ list: [], secret: '' });
-              } else {
-                reject(err);
-              }
-              return;
+    this._localData = await new Promise((resolve, reject): void => {
+      const { bucket, keyPrefix } = this.config;
+      this.logger.debug({ keyPrefix, bucket }, 's3: [_getData] bucket: @{bucket} prefix: @{keyPrefix}');
+      this.logger.trace('s3: [_getData] get database object');
+      this.s3.getObject(
+        {
+          Bucket: bucket,
+          Key: `${keyPrefix}verdaccio-s3-db.json`,
+        },
+        (err, response) => {
+          if (err) {
+            const s3Err: VerdaccioError = convertS3Error(err);
+            this.logger.error({ err: s3Err.message }, 's3: [_getData] err: @{err}');
+            if (is404Error(s3Err)) {
+              this.logger.error('s3: [_getData] err 404 create new database');
+              resolve({ list: [], secret: '' });
+            } else {
+              reject(err);
             }
-
-            const body = response.Body ? response.Body.toString() : '';
-            const data = JSON.parse(body);
-            this.logger.trace({ body }, 's3: [_getData] get data @{body}');
-            resolve(data);
+            return;
           }
-        );
-      });
-    } else {
-      this.logger.trace('s3: [_getData] already exist');
-    }
 
+          const body = response.Body ? response.Body.toString() : '';
+          const data = JSON.parse(body);
+          this.logger.trace({ body }, 's3: [_getData] get data @{body}');
+          resolve(data);
+        }
+      );
+    });
     return this._localData as LocalStorage;
   }
 
